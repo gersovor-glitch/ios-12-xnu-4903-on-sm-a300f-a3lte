@@ -40,7 +40,7 @@ jobs:
         working-directory: ./xnu
         env:
           MACHINE_CONFIGS: a3lte
-          RC_DARWIN_KERNEL_VERSION: 12.4
+          RC_DARWIN_KERNEL_VERSION: 18.7.0
         run: |
           # Use the macOS SDK
           SDKROOT=$(xcrun --show-sdk-path)
@@ -135,7 +135,7 @@ jobs:
         working-directory: ./xnu
         env:
           MACHINE_CONFIGS: a3lte
-          RC_DARWIN_KERNEL_VERSION: 12.4
+          RC_DARWIN_KERNEL_VERSION: 18.7.0
         run: |
           SDKROOT=$(xcrun --show-sdk-path)
           echo "Using SDKROOT: $SDKROOT"
