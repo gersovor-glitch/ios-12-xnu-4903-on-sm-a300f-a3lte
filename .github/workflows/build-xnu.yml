@@ -17,12 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: true
           submodules: recursive
-
-      - name: Initialize submodules
-        run: |
-          git submodule update --init --recursive
 
       - name: Verify xnu submodule
         run: |
@@ -84,12 +79,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          submodules: true
           submodules: recursive
-
-      - name: Initialize submodules
-        run: |
-          git submodule update --init --recursive
 
       - name: Verify xnu submodule
         run: |
