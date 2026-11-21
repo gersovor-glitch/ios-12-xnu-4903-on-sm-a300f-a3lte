@@ -62,7 +62,11 @@ jobs:
           # Find the built kernel
           echo "=== Searching for kernel (from xnu dir) ==="
           pwd
+          echo "=== All kernel files ==="
           find . -name "kernel*" -type f 2>/dev/null | head -50
+          echo "=== BUILD directory structure ==="
+          ls -la BUILD/ 2>/dev/null || echo "No BUILD dir"
+          find BUILD -type f -name "kernel*" 2>/dev/null | head -50
           echo "=== Searching for development kernel ==="
           # Try multiple patterns
           KERNEL_PATH=$(find . -name "kernel.development*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
@@ -150,7 +154,11 @@ jobs:
           # Find the built kernel
           echo "=== Searching for kernel (from xnu dir) ==="
           pwd
+          echo "=== All kernel files ==="
           find . -name "kernel*" -type f 2>/dev/null | head -50
+          echo "=== BUILD directory structure ==="
+          ls -la BUILD/ 2>/dev/null || echo "No BUILD dir"
+          find BUILD -type f -name "kernel*" 2>/dev/null | head -50
           echo "=== Searching for release kernel ==="
           # Try multiple patterns
           KERNEL_PATH=$(find . -name "kernel.release*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
