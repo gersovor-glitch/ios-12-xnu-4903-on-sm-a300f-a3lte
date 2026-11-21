@@ -55,7 +55,7 @@ jobs:
           echo "SRCROOT: $SRCROOT"
 
           # Build XNU with a3lte machine config
-          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=DEVELOPMENT 2>&1 | tail -100
+          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=DEVELOPMENT 2>&1 | tail -1000
 
       - name: Find and copy built kernel
         working-directory: ./xnu
