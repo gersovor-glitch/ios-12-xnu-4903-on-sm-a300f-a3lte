@@ -61,21 +61,25 @@ jobs:
         run: |
           # Find the built kernel
           echo "=== Searching for kernel ==="
-          find BUILD -name "kernel*" -type f
+          find . -name "kernel*" -type f 2>/dev/null | head -50
           echo "=== Searching for development kernel ==="
           # Try multiple patterns
-          KERNEL_PATH=$(find BUILD -name "kernel.development*" -type f | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+          KERNEL_PATH=$(find . -name "kernel.development*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           if [ -z "$KERNEL_PATH" ]; then
             # Try alternative pattern
-            KERNEL_PATH=$(find BUILD -name "kernel.*development*" -type f | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+            KERNEL_PATH=$(find . -name "kernel.*development*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
             # Try any kernel in development config
-            KERNEL_PATH=$(find BUILD -path "*DEVELOPMENT*" -name "kernel*" -type f | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+            KERNEL_PATH=$(find . -path "*DEVELOPMENT*" -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+          fi
+          if [ -z "$KERNEL_PATH" ]; then
+            # Try kernel in obj/development
+            KERNEL_PATH=$(find . -path "*development*" -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
             echo "ERROR: Could not find built kernel"
-            find BUILD -name "kernel*" -type f
+            find . -name "kernel*" -type f 2>/dev/null | head -50
             exit 1
           fi
           echo "Found kernel at: $KERNEL_PATH"
@@ -140,21 +144,25 @@ jobs:
         run: |
           # Find the built kernel
           echo "=== Searching for kernel ==="
-          find BUILD -name "kernel*" -type f
+          find . -name "kernel*" -type f 2>/dev/null | head -50
           echo "=== Searching for release kernel ==="
           # Try multiple patterns
-          KERNEL_PATH=$(find BUILD -name "kernel.release*" -type f | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+          KERNEL_PATH=$(find . -name "kernel.release*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           if [ -z "$KERNEL_PATH" ]; then
             # Try alternative pattern
-            KERNEL_PATH=$(find BUILD -name "kernel.*release*" -type f | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+            KERNEL_PATH=$(find . -name "kernel.*release*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
             # Try any kernel in release config
-            KERNEL_PATH=$(find BUILD -path "*RELEASE*" -name "kernel*" -type f | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+            KERNEL_PATH=$(find . -path "*RELEASE*" -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+          fi
+          if [ -z "$KERNEL_PATH" ]; then
+            # Try kernel in obj/release
+            KERNEL_PATH=$(find . -path "*release*" -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
             echo "ERROR: Could not find built kernel"
-            find BUILD -name "kernel*" -type f
+            find . -name "kernel*" -type f 2>/dev/null | head -50
             exit 1
           fi
           echo "Found kernel at: $KERNEL_PATH"
