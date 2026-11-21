@@ -45,8 +45,16 @@ jobs:
           SDKROOT=$(xcrun --show-sdk-path)
           echo "Using SDKROOT: $SDKROOT"
 
+          # Debug: check build environment
+          echo "=== Build Environment ==="
+          pwd
+          ls -la config/
+          ls -la pexpert/arm64/
+          echo "MAKETOP: $MAKETOP"
+          echo "SRCROOT: $SRCROOT"
+
           # Build XNU with a3lte machine config
-          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=DEVELOPMENT
+          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=DEVELOPMENT 2>&1 | tail -100
 
       - name: Find and copy built kernel
         working-directory: ./xnu
@@ -104,7 +112,16 @@ jobs:
         run: |
           SDKROOT=$(xcrun --show-sdk-path)
           echo "Using SDKROOT: $SDKROOT"
-          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=RELEASE
+
+          # Debug: check build environment
+          echo "=== Build Environment ==="
+          pwd
+          ls -la config/
+          ls -la pexpert/arm64/
+          echo "MAKETOP: $MAKETOP"
+          echo "SRCROOT: $SRCROOT"
+
+          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=RELEASE 2>&1 | tail -100
 
       - name: Find and copy built kernel
         working-directory: ./xnu
