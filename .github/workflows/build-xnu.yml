@@ -60,7 +60,8 @@ jobs:
         working-directory: ./xnu
         run: |
           # Find the built kernel
-          echo "=== Searching for kernel ==="
+          echo "=== Searching for kernel (from xnu dir) ==="
+          pwd
           find . -name "kernel*" -type f 2>/dev/null | head -50
           echo "=== Searching for development kernel ==="
           # Try multiple patterns
@@ -78,20 +79,24 @@ jobs:
             KERNEL_PATH=$(find . -path "*development*" -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
+            # Try BUILD directory
+            KERNEL_PATH=$(find BUILD -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+          fi
+          if [ -z "$KERNEL_PATH" ]; then
             echo "ERROR: Could not find built kernel"
             find . -name "kernel*" -type f 2>/dev/null | head -50
             exit 1
           fi
           echo "Found kernel at: $KERNEL_PATH"
-          cp "$KERNEL_PATH" ../mach_kernel
-          ls -la ../mach_kernel
+          cp "$KERNEL_PATH" /home/runner/work/ios-12-xnu-4903-on-sm-a300f-a3lte/mach_kernel
+          ls -la /home/runner/work/ios-12-xnu-4903-on-sm-a300f-a3lte/mach_kernel
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: a3lte-xnu-build
           path: |
-            mach_kernel
+            /home/runner/work/ios-12-xnu-4903-on-sm-a300f-a3lte/mach_kernel
           retention-days: 30
 
   build-xnu-release:
@@ -143,7 +148,8 @@ jobs:
         working-directory: ./xnu
         run: |
           # Find the built kernel
-          echo "=== Searching for kernel ==="
+          echo "=== Searching for kernel (from xnu dir) ==="
+          pwd
           find . -name "kernel*" -type f 2>/dev/null | head -50
           echo "=== Searching for release kernel ==="
           # Try multiple patterns
@@ -161,18 +167,22 @@ jobs:
             KERNEL_PATH=$(find . -path "*release*" -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
+            # Try BUILD directory
+            KERNEL_PATH=$(find BUILD -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+          fi
+          if [ -z "$KERNEL_PATH" ]; then
             echo "ERROR: Could not find built kernel"
             find . -name "kernel*" -type f 2>/dev/null | head -50
             exit 1
           fi
           echo "Found kernel at: $KERNEL_PATH"
-          cp "$KERNEL_PATH" ../mach_kernel.release
-          ls -la ../mach_kernel.release
+          cp "$KERNEL_PATH" /home/runner/work/ios-12-xnu-4903-on-sm-a300f-a3lte/mach_kernel.release
+          ls -la /home/runner/work/ios-12-xnu-4903-on-sm-a300f-a3lte/mach_kernel.release
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: a3lte-xnu-build-release
           path: |
-            mach_kernel.release
+            /home/runner/work/ios-12-xnu-4903-on-sm-a300f-a3lte/mach_kernel.release
           retention-days: 30
