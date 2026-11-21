@@ -1,0 +1,43 @@
+# iOS 12.4 on SM-A300F a3lte - .gitignore
+
+# IPSW and firmware files
+*.ipsw
+*.img
+*.bin
+*.pit
+
+# Backup directories
+backup*/
+*efs*
+*dyld*
+
+# Keys and certificates
+*.key
+
+# Build outputs
+xnu-4903/BUILD/
+ios-16-SM-G360T1/loader/out/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.swp
+*~
+
+# Local config
+*.local
