@@ -28,7 +28,7 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '10.3'
 
       - name: Install dependencies
         run: |
@@ -36,14 +36,21 @@ jobs:
           brew install llvm@18
           echo "/usr/local/opt/llvm@18/bin" >> $GITHUB_PATH
 
+      - name: Setup iOS SDK
+        run: |
+          # List available SDKs
+          xcodebuild -showsdks
+          # Use iOS SDK
+          export SDKROOT=$(xcrun --sdk iphoneos --show-sdk-path)
+          echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
+
       - name: Build XNU kernel for a3lte (DEVELOPMENT)
         working-directory: ./xnu
         env:
           MACHINE_CONFIGS: a3lte
           RC_DARWIN_KERNEL_VERSION: 18.7.0
         run: |
-          # Use the macOS SDK
-          SDKROOT=$(xcrun --show-sdk-path)
+          # Use the iOS SDK (set in Setup iOS SDK step)
           echo "Using SDKROOT: $SDKROOT"
 
           # Debug: check build environment
@@ -125,12 +132,20 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '10.3'
 
       - name: Install dependencies
         run: |
           brew install llvm@18
           echo "/usr/local/opt/llvm@18/bin" >> $GITHUB_PATH
+
+      - name: Setup iOS SDK
+        run: |
+          # List available SDKs
+          xcodebuild -showsdks
+          # Use iOS SDK
+          export SDKROOT=$(xcrun --sdk iphoneos --show-sdk-path)
+          echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
 
       - name: Build XNU kernel for a3lte (RELEASE)
         working-directory: ./xnu
@@ -138,7 +153,7 @@ jobs:
           MACHINE_CONFIGS: a3lte
           RC_DARWIN_KERNEL_VERSION: 18.7.0
         run: |
-          SDKROOT=$(xcrun --show-sdk-path)
+          # Use the iOS SDK (set in Setup iOS SDK step)
           echo "Using SDKROOT: $SDKROOT"
 
           # Debug: check build environment
@@ -149,7 +164,7 @@ jobs:
           echo "MAKETOP: $MAKETOP"
           echo "SRCROOT: $SRCROOT"
 
-          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=RELEASE 2>&1 | tail -100
+          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=RELEASE 2>&1 | tail -1000
 
       - name: Find and copy built kernel
         working-directory: ./xnu
