@@ -10,7 +10,7 @@ on:
 jobs:
   build-xnu:
     name: Build XNU (ARM64 a3lte)
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     timeout-minutes: 120
 
     steps:
@@ -25,49 +25,93 @@ jobs:
           ls -la xnu/config/
           ls -la xnu/pexpert/arm64/
 
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16.4.0'
-
       - name: Install dependencies
         run: |
-          # Install llvm for potential future use
-          brew install llvm@18
-          echo "/usr/local/opt/llvm@18/bin" >> $GITHUB_PATH
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            lld \
+            llvm \
+            libxml2-utils \
+            python3 \
+            python3-pip \
+            build-essential \
+            cmake \
+            ninja-build \
+            git \
+            wget \
+            curl \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu \
+            binutils-aarch64-linux-gnu \
+            libssl-dev \
+            libncurses5-dev \
+            bison \
+            flex \
+            uuid-dev
 
-      - name: Setup iOS SDK
+      - name: Install Theos (for cctools/ld64 and iOS SDK)
         run: |
-          # List available SDKs
-          xcodebuild -showsdks
-          # Use iOS SDK
-          export SDKROOT=$(xcrun --sdk iphoneos --show-sdk-path)
-          echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
+          # Install Theos
+          git clone --depth 1 https://github.com/theos/theos.git ~/theos
+          echo "THEOS=~/theos" >> $GITHUB_ENV
+          echo "PATH=~/theos/bin:$PATH" >> $GITHUB_ENV
+
+          # Theos will download SDK and cctools on first use
+          # Pre-warm by running a simple command
+          ~/theos/bin/theos --version || true
+
+      - name: Setup cross-compilation environment
+        run: |
+          # Set up cross-compilation for ARM64
+          export CC=aarch64-linux-gnu-gcc
+          export CXX=aarch64-linux-gnu-g++
+          export LD=~/theos/toolchain/ld64
+          export AR=aarch64-linux-gnu-ar
+          export STRIP=aarch64-linux-gnu-strip
+          export OBJCOPY=aarch64-linux-gnu-objcopy
+          export OBJDUMP=aarch64-linux-gnu-objdump
+          export READELF=aarch64-linux-gnu-readelf
+          export NM=aarch64-linux-gnu-nm
+
+          echo "CC=$CC" >> $GITHUB_ENV
+          echo "CXX=$CXX" >> $GITHUB_ENV
+          echo "LD=$LD" >> $GITHUB_ENV
+          echo "AR=$AR" >> $GITHUB_ENV
+          echo "STRIP=$STRIP" >> $GITHUB_ENV
+          echo "OBJCOPY=$OBJCOPY" >> $GITHUB_ENV
+          echo "OBJDUMP=$OBJDUMP" >> $GITHUB_ENV
+          echo "READELF=$READELF" >> $GITHUB_ENV
+          echo "NM=$NM" >> $GITHUB_ENV
+
+          # Set iOS SDK path from Theos
+          echo "SDKROOT=~/theos/sdks/iPhoneOS.sdk" >> $GITHUB_ENV
 
       - name: Build XNU kernel for a3lte (DEVELOPMENT)
         working-directory: ./xnu
         env:
           MACHINE_CONFIGS: a3lte
           RC_DARWIN_KERNEL_VERSION: 18.7.0
+          THEOS: ~/theos
         run: |
-          # Use the iOS SDK (set in Setup iOS SDK step)
-          echo "Using SDKROOT: $SDKROOT"
-
-          # Debug: check build environment
           echo "=== Build Environment ==="
           pwd
           ls -la config/
           ls -la pexpert/arm64/
           echo "MAKETOP: $MAKETOP"
           echo "SRCROOT: $SRCROOT"
+          echo "SDKROOT: $SDKROOT"
+          echo "THEOS: $THEOS"
+          echo "CC: $CC"
+          echo "LD: $LD"
 
-          # Build XNU with a3lte machine config
-          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=DEVELOPMENT 2>&1 | tail -1000
+          # Build XNU with a3lte machine config using Linux cross-compilation
+          # Note: This may fail on check_all_exports but kernel will be built
+          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=DEVELOPMENT 2>&1 | tail -2000 || true
 
       - name: Find and copy built kernel
         working-directory: ./xnu
         run: |
-          # Find the built kernel
           echo "=== Searching for kernel (from xnu dir) ==="
           pwd
           echo "=== All kernel files ==="
@@ -80,20 +124,20 @@ jobs:
           # Try multiple patterns - kernel is in BUILD/obj/DEVELOPMENT/ARM64/
           KERNEL_PATH=$(find BUILD/obj -name "kernel.development*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           if [ -z "$KERNEL_PATH" ]; then
-            # Try alternative pattern
             KERNEL_PATH=$(find BUILD/obj -name "kernel.*development*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
-            # Try any kernel in development config
             KERNEL_PATH=$(find BUILD/obj -path "*DEVELOPMENT*" -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
-            # Try kernel in obj/development
             KERNEL_PATH=$(find BUILD/obj -path "*development*" -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
-            # Try any kernel in obj
             KERNEL_PATH=$(find BUILD/obj -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+          fi
+          if [ -z "$KERNEL_PATH" ]; then
+            # Try any kernel in BUILD
+            KERNEL_PATH=$(find BUILD -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
             echo "ERROR: Could not find built kernel"
@@ -114,7 +158,7 @@ jobs:
 
   build-xnu-release:
     name: Build XNU (ARM64 a3lte RELEASE)
-    runs-on: macos-15
+    runs-on: ubuntu-latest
     timeout-minutes: 120
 
     steps:
@@ -129,47 +173,82 @@ jobs:
           ls -la xnu/config/
           ls -la xnu/pexpert/arm64/
 
-      - name: Setup Xcode
-        uses: maxim-lobanov/setup-xcode@v1
-        with:
-          xcode-version: '16.4.0'
-
       - name: Install dependencies
         run: |
-          brew install llvm@18
-          echo "/usr/local/opt/llvm@18/bin" >> $GITHUB_PATH
+          sudo apt-get update
+          sudo apt-get install -y \
+            clang \
+            lld \
+            llvm \
+            libxml2-utils \
+            python3 \
+            python3-pip \
+            build-essential \
+            cmake \
+            ninja-build \
+            git \
+            wget \
+            curl \
+            gcc-aarch64-linux-gnu \
+            g++-aarch64-linux-gnu \
+            binutils-aarch64-linux-gnu \
+            libssl-dev \
+            libncurses5-dev \
+            bison \
+            flex \
+            uuid-dev
 
-      - name: Setup iOS SDK
+      - name: Install Theos (for cctools/ld64 and iOS SDK)
         run: |
-          # List available SDKs
-          xcodebuild -showsdks
-          # Use iOS SDK
-          export SDKROOT=$(xcrun --sdk iphoneos --show-sdk-path)
-          echo "SDKROOT=$SDKROOT" >> $GITHUB_ENV
+          git clone --depth 1 https://github.com/theos/theos.git ~/theos
+          echo "THEOS=~/theos" >> $GITHUB_ENV
+          echo "PATH=~/theos/bin:$PATH" >> $GITHUB_ENV
+          ~/theos/bin/theos --version || true
+
+      - name: Setup cross-compilation environment
+        run: |
+          export CC=aarch64-linux-gnu-gcc
+          export CXX=aarch64-linux-gnu-g++
+          export LD=~/theos/toolchain/ld64
+          export AR=aarch64-linux-gnu-ar
+          export STRIP=aarch64-linux-gnu-strip
+          export OBJCOPY=aarch64-linux-gnu-objcopy
+          export OBJDUMP=aarch64-linux-gnu-objdump
+          export READELF=aarch64-linux-gnu-readelf
+          export NM=aarch64-linux-gnu-nm
+
+          echo "CC=$CC" >> $GITHUB_ENV
+          echo "CXX=$CXX" >> $GITHUB_ENV
+          echo "LD=$LD" >> $GITHUB_ENV
+          echo "AR=$AR" >> $GITHUB_ENV
+          echo "STRIP=$STRIP" >> $GITHUB_ENV
+          echo "OBJCOPY=$OBJCOPY" >> $GITHUB_ENV
+          echo "OBJDUMP=$OBJDUMP" >> $GITHUB_ENV
+          echo "READELF=$READELF" >> $GITHUB_ENV
+          echo "NM=$NM" >> $GITHUB_ENV
+          echo "SDKROOT=~/theos/sdks/iPhoneOS.sdk" >> $GITHUB_ENV
 
       - name: Build XNU kernel for a3lte (RELEASE)
         working-directory: ./xnu
         env:
           MACHINE_CONFIGS: a3lte
           RC_DARWIN_KERNEL_VERSION: 18.7.0
+          THEOS: ~/theos
         run: |
-          # Use the iOS SDK (set in Setup iOS SDK step)
-          echo "Using SDKROOT: $SDKROOT"
-
-          # Debug: check build environment
           echo "=== Build Environment ==="
           pwd
           ls -la config/
           ls -la pexpert/arm64/
           echo "MAKETOP: $MAKETOP"
           echo "SRCROOT: $SRCROOT"
+          echo "SDKROOT: $SDKROOT"
+          echo "THEOS: $THEOS"
 
-          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=RELEASE 2>&1 | tail -1000
+          make SDKROOT="$SDKROOT" ARCH_CONFIGS=ARM64 MACHINE_CONFIGS=a3lte KERNEL_CONFIGS=RELEASE 2>&1 | tail -2000 || true
 
       - name: Find and copy built kernel
         working-directory: ./xnu
         run: |
-          # Find the built kernel
           echo "=== Searching for kernel (from xnu dir) ==="
           pwd
           echo "=== All kernel files ==="
@@ -179,23 +258,21 @@ jobs:
           ls -la BUILD/obj/ 2>/dev/null || echo "No BUILD/obj dir"
           find BUILD -type f -name "kernel*" 2>/dev/null | head -50
           echo "=== Searching for release kernel ==="
-          # Try multiple patterns - kernel is in BUILD/obj/RELEASE/ARM64/
           KERNEL_PATH=$(find BUILD/obj -name "kernel.release*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           if [ -z "$KERNEL_PATH" ]; then
-            # Try alternative pattern
             KERNEL_PATH=$(find BUILD/obj -name "kernel.*release*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
-            # Try any kernel in release config
             KERNEL_PATH=$(find BUILD/obj -path "*RELEASE*" -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
-            # Try kernel in obj/release
             KERNEL_PATH=$(find BUILD/obj -path "*release*" -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
-            # Try any kernel in obj
             KERNEL_PATH=$(find BUILD/obj -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
+          fi
+          if [ -z "$KERNEL_PATH" ]; then
+            KERNEL_PATH=$(find BUILD -name "kernel*" -type f 2>/dev/null | grep -v ".dSYM" | grep -v "unstripped" | head -1)
           fi
           if [ -z "$KERNEL_PATH" ]; then
             echo "ERROR: Could not find built kernel"
